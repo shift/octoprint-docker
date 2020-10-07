@@ -64,15 +64,16 @@ COPY --from=s6build /tmp /tmp
 RUN s6tar=$(find /tmp -name "s6-overlay-*.tar.gz") \
   && tar xzf $s6tar -C / 
 
-# Install mjpg-streamer
+# Install mjpg-streamer in one command to not leave the source in the container
 RUN curl -fsSLO --compressed --retry 3 --retry-delay 10 \
   https://github.com/jacksonliam/mjpg-streamer/archive/master.tar.gz \
   && mkdir /mjpg \
-  && tar xzf master.tar.gz -C /mjpg
-
-WORKDIR /mjpg/mjpg-streamer-master/mjpg-streamer-experimental
-RUN make
-RUN make install
+  && tar xzf master.tar.gz -C /mjpg \
+  && cd /mjpg/mjpg-streamer-master/mjpg-streamer-experimental \
+  && make \
+  && make install \
+  && cd \
+  && rm -rf /mjpg/mjpg-streamer-master/mjpg-streamer-experimental
 
 # Copy services into s6 servicedir and set default ENV vars
 COPY root /
