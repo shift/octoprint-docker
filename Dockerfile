@@ -41,7 +41,7 @@ RUN apt-get update && apt-get install -y \
   xz-utils \
   zlib1g-dev
 
-# Create octoprint user for dropping privlages later on
+# Create octoprint user for dropping privileges later on
 RUN groupadd --gid 1000 octoprint \
   && useradd --uid 1000 --gid octoprint -G dialout --shell /bin/bash --create-home octoprint
 
