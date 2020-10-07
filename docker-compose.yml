@@ -5,7 +5,7 @@ services:
     image: octoprint/octoprint
     restart: unless-stopped
     ports:
-      - 80:80
+      - 5000:5000
     # devices:
     #  - /dev/ttyACM0:/dev/ttyACM0
     # - /dev/video0:/dev/video0
@@ -15,7 +15,36 @@ services:
     # you add a video device
     #environment:
     #  - ENABLE_MJPG_STREAMER=true
-  
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.octoprint.rule=Host(`${OCTOPRINT_DOMAINNAME}`)"
+      - "traefik.http.routers.octoprint.entrypoints=web"
+
+  traefik:
+    image: "traefik:v2.3"
+    container_name: "ingress"
+    command:
+      #- "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge.provider=ovh"
+      #- "--certificatesresolvers.myresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    env_file:
+      - ./config/letsencrypt
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+
   ####
   # uncomment if you wish to edit the configuration files of octoprint
   # refer to docs on configuration editing for more information

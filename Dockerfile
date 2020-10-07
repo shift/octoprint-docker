@@ -20,8 +20,6 @@ RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
 
 FROM python:${PYTHON_BASE_IMAGE} AS build
 
-ARG tag
-ENV tag ${tag:-master}
 
 RUN apt-get update && apt-get install -y \
   avrdude \
@@ -33,7 +31,7 @@ RUN apt-get update && apt-get install -y \
   fontconfig \
   g++ \
   git \
-  haproxy \
+  socat \
   libjpeg-dev \
   libjpeg62-turbo \
   libprotobuf-dev \
@@ -43,12 +41,13 @@ RUN apt-get update && apt-get install -y \
   xz-utils \
   zlib1g-dev
 
-# unpack s6
-COPY --from=s6build /tmp /tmp
-RUN s6tar=$(find /tmp -name "s6-overlay-*.tar.gz") \
-  && tar xzf $s6tar -C / 
+# Create octoprint user for dropping privlages later on
+RUN groupadd --gid 1000 octoprint \
+  && useradd --uid 1000 --gid octoprint -G dialout --shell /bin/bash --create-home octoprint
 
 # Install octoprint
+ARG tag
+ENV tag ${tag:-master}
 RUN	curl -fsSLO --compressed --retry 3 --retry-delay 10 \
   https://github.com/OctoPrint/OctoPrint/archive/${tag}.tar.gz \
 	&& mkdir -p /opt/octoprint \
@@ -57,7 +56,13 @@ RUN	curl -fsSLO --compressed --retry 3 --retry-delay 10 \
 WORKDIR /opt/octoprint
 RUN pip install -r requirements.txt
 RUN python setup.py install
-RUN ln -s ~/.octoprint /octoprint
+RUN ln -s ~octoprint/.octoprint /octoprint
+
+
+# unpack s6
+COPY --from=s6build /tmp /tmp
+RUN s6tar=$(find /tmp -name "s6-overlay-*.tar.gz") \
+  && tar xzf $s6tar -C / 
 
 # Install mjpg-streamer
 RUN curl -fsSLO --compressed --retry 3 --retry-delay 10 \
@@ -73,13 +78,12 @@ RUN make install
 COPY root /
 ENV CAMERA_DEV /dev/video0
 ENV MJPG_STREAMER_INPUT -y -n -r 640x480
+
 ENV PIP_USER true
 ENV PYTHONUSERBASE /octoprint/plugins
 
-# port to access haproxy frontend
-EXPOSE 80
+# port to access octoprint frontend
+EXPOSE 5000
 
-VOLUME /octoprint
-
+VOLUME ["/octoprint"]
 ENTRYPOINT ["/init"]
-CMD ["octoprint", "serve", "--iknowwhatimdoing", "--host", "0.0.0.0"]
