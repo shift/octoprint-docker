@@ -4,8 +4,6 @@ services:
   octoprint:
     image: octoprint/octoprint
     restart: unless-stopped
-    ports:
-      - 5000:5000
     # devices:
     #  - /dev/ttyACM0:/dev/ttyACM0
     # - /dev/video0:/dev/video0
