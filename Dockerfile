@@ -42,8 +42,9 @@ RUN apt-get update && apt-get install -y \
   zlib1g-dev
 
 # Create octoprint user for dropping privileges later on
-RUN groupadd --gid 1000 octoprint \
-  && useradd --uid 1000 --gid octoprint -G dialout --shell /bin/bash --create-home octoprint
+RUN mkdir -p /data/octoprint \
+  && groupadd --gid 1000 octoprint \
+  && useradd --uid 1000 --gid octoprint -G dialout --shell /bin/bash --home-dir /data/octoprint octoprint
 
 # Install octoprint
 ARG tag
@@ -73,7 +74,7 @@ RUN curl -fsSLO --compressed --retry 3 --retry-delay 10 \
   && make \
   && make install \
   && cd \
-  && rm -rf /mjpg/mjpg-streamer-master/mjpg-streamer-experimental
+  && rm -rf /mjpg/mjpg-streamer-master/mjpg-streamer-experimental /opt/octoprint/master.tar.gz
 
 # Copy services into s6 servicedir and set default ENV vars
 COPY root /
@@ -86,5 +87,5 @@ ENV PYTHONUSERBASE /octoprint/plugins
 # port to access octoprint frontend
 EXPOSE 5000
 
-VOLUME ["/octoprint"]
+VOLUME ["/data"]
 ENTRYPOINT ["/init"]
